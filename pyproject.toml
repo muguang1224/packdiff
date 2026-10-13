@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ctxpack"
+version = "0.1.0"
+description = "Pack a repository into a single, LLM-friendly Markdown file."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "muguang1224", email = "137096726+muguang1224@users.noreply.github.com" }]
+keywords = ["llm", "context", "markdown", "cli", "prompt-engineering", "codebase", "ai-agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.6.0"]
+
+[project.scripts]
+ctxpack = "ctxpack.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/muguang1224/ctxpack"
+Repository = "https://github.com/muguang1224/ctxpack"
+Issues = "https://github.com/muguang1224/ctxpack/issues"
+Changelog = "https://github.com/muguang1224/ctxpack/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]

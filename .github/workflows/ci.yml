@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: python -m pip install ruff==0.17.0
+      - name: Lint
+        run: ruff check --output-format=github .
+      - name: Check formatting
+        run: ruff format --check .
+
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Smoke test the CLI
+        shell: bash
+        run: |
+          ctxpack --version
+          ctxpack . --max-tokens 8k --list
+          ctxpack . --no-tree -q -o pack.md
+          test -s pack.md
+      - name: Verify the secret filter end to end
+        shell: bash
+        run: |
+          # Generate the probe at runtime so this workflow file can never
+          # itself contain the string we are grepping for.
+          SECRET=$(python -c "import secrets; print('ctxpack-' + secrets.token_hex(16))")
+
+          mkdir -p scratch
+          printf 'TOKEN=%s\n' "$SECRET" > scratch/.env
+          printf -- '-----BEGIN PRIVATE KEY-----\n' > scratch/server.pem
+          printf '%s\n' "$SECRET" >> scratch/server.pem
+          printf 'TOKEN=changeme\n' > scratch/.env.example
+
+          ctxpack . -q -o pack.md
+
+          if grep -q "$SECRET" pack.md; then
+            echo "::error::a secret leaked into the pack"
+            exit 1
+          fi
+          if ! grep -q "changeme" pack.md; then
+            echo "::error::.env.example should have been kept"
+            exit 1
+          fi
+          if ! grep -q 'scratch/.env' pack.md; then
+            echo "::error::the skipped secret was not reported in the pack"
+            exit 1
+          fi

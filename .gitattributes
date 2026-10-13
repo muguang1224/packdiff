@@ -1,0 +1,13 @@
+# Normalise line endings in the repository, but leave the test fixtures alone.
+* text=auto eol=lf
+
+*.py text diff=python
+*.md text
+*.toml text
+*.yml text
+*.yaml text
+
+# Binary-ish files that should never be converted.
+*.png binary
+*.jpg binary
+*.pdf binary
