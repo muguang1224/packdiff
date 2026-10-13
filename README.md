@@ -1,6 +1,7 @@
 # packdiff
 
-**Pack a repository into a single, LLM-friendly Markdown file.**
+**Pack a repository into one LLM-friendly Markdown file — or just the files you
+have changed.**
 
 [![CI](https://github.com/muguang1224/packdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/muguang1224/packdiff/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/packdiff)](https://pypi.org/project/packdiff/)
@@ -9,6 +10,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 [English](README.md) · [简体中文](README.zh-CN.md)
+
+![packdiff --diff packs only the files you changed](docs/demo.gif)
+
+*Two files edited and one added in a 16-file project; `packdiff --diff -o review.md`
+packs exactly those three. Everything else is left out of the prompt.*
 
 You are about to paste a codebase into an LLM. Which files? How big is the
 prompt? Did you just include `.env`?

@@ -1,6 +1,6 @@
 # packdiff
 
-**把一个代码仓库打包成单个、适合喂给大模型的 Markdown 文件。**
+**把一个代码仓库打包成单个、适合喂给大模型的 Markdown 文件 —— 整个仓库，或者只打包你改过的那些文件。**
 
 [![CI](https://github.com/muguang1224/packdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/muguang1224/packdiff/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/packdiff)](https://pypi.org/project/packdiff/)
@@ -9,6 +9,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 [English](README.md) · 简体中文
+
+![packdiff --diff 只打包改动过的文件](docs/demo.gif)
+
+*一个 16 个文件的项目里改了 2 个、新增 1 个；`packdiff --diff -o review.md` 恰好只打包
+这 3 个，其余全部不进提示词。*
 
 准备把整个代码库贴给大模型的时候，你大概会卡在这三个问题上：**该放哪些文件？
 这一坨到底多少 token？我是不是刚把 `.env` 也塞进去了？**
