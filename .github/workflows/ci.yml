@@ -87,3 +87,28 @@ jobs:
             echo "::error::the skipped secret was not reported in the pack"
             exit 1
           fi
+      - name: Smoke test --diff in a scratch repository
+        shell: bash
+        run: |
+          rm -rf diff-demo
+          mkdir diff-demo
+          cd diff-demo
+          git init -q
+          git config user.email ci@example.invalid
+          git config user.name CI
+          printf 'one\n' > changed.py
+          printf 'two\n' > untouched.py
+          git add -A
+          git commit -qm initial
+
+          printf 'edited\n' > changed.py
+          ctxpack . --diff -q -o diff-pack.md
+
+          grep -q '### `changed.py`' diff-pack.md || {
+            echo "::error::--diff did not pack the changed file"
+            exit 1
+          }
+          if grep -q '### `untouched.py`' diff-pack.md; then
+            echo "::error::--diff packed a file that did not change"
+            exit 1
+          fi

@@ -20,6 +20,7 @@ estimate in the header.
 ```
 ctxpack . -o context.md                # pack the current repo
 ctxpack --max-tokens 32k -o ctx.md     # ...and fit it in a 32k window
+ctxpack --diff -o review.md            # ...or just what you have not committed
 ctxpack src/ docs/ --include '*.py'    # ...or just two trees, Python only
 ```
 
@@ -133,6 +134,57 @@ ctxpack: 5 files, 103 B from my-service
 ctxpack: skipped .env: looks like a secret (pass --include-secrets)
 ```
 
+## Reviewing only what changed
+
+The most common way to use this tool is not "here is my repository" but "here is
+what I just changed". `--diff` packs only the files that differ from a revision,
+and it includes uncommitted and untracked files, because a new file is part of
+the change:
+
+```bash
+ctxpack --diff                      # what have I not committed yet?
+ctxpack --diff main                 # what does this branch add on top of main?
+ctxpack --diff HEAD~3 -o review.md  # the last three commits
+ctxpack src/ --diff                 # ...restricted to one subtree
+```
+
+It composes with everything else, so the change set still passes through
+`.gitignore`, the binary check and the secret filter:
+
+```bash
+ctxpack --diff --max-tokens 16k | pbcopy
+```
+
+Deletion is handled the way you would hope: a deleted file appears in the change
+set from git, then fails to match anything on disk, so it simply is not packed.
+Nothing changed, or everything in the change set was filtered out, is a clear
+error rather than an empty pack:
+
+```
+$ ctxpack --diff
+ctxpack: error: no files changed against 'HEAD'
+```
+
+Change detection shells out to `git diff`, so the answer is the same one
+`git status` just gave you — and if git is missing, or the revision is wrong, or
+you point `--diff` at a directory outside the repository, you get an error that
+says so instead of a silently empty pack.
+
+## A worked example
+
+[`examples/demo-project.pack.md`](examples/demo-project.pack.md) is a committed
+pack of a small demo project, so you can read the real output without installing
+anything. The demo directory is arranged to show the filters doing their job:
+`cache/` and `debug.log` are gone via `.gitignore`, `assets/logo.png` is gone as
+binary, and `.env.example` survives because a template is not a secret.
+
+```bash
+python3 examples/regenerate.py    # rebuild it after changing the format
+```
+
+`tests/test_examples.py` regenerates the pack and compares it byte for byte
+against the committed file, so the example cannot quietly drift out of date.
+
 ## Token budgets
 
 `--max-tokens` keeps the pack inside a context window instead of blowing past
@@ -239,6 +291,7 @@ to send.
 | `PATH...` | `.` | Files or directories to pack. Multiple roots are merged into one document. |
 | `-o, --output FILE` | stdout | Write the pack to `FILE`. `-` means stdout. |
 | `--max-tokens N` | unlimited | Keep the pack under roughly `N` tokens. Accepts `32k`, `1m`. |
+| `--diff [REV]` | off | Only pack files changed against `REV` (default `HEAD`), including uncommitted and untracked files. |
 | `--include GLOB` | — | Only pack matching paths. Repeatable. |
 | `--exclude GLOB` | — | Skip matching paths. Repeatable. |
 | `--ignore-file FILE` | `.ctxpackignore` | Extra ignore file, gitignore syntax. |
@@ -266,7 +319,14 @@ ctxpack src/ --max-tokens 16k | pbcopy            # macOS
 ctxpack src/ --max-tokens 16k | clip              # Windows
 ```
 
-**A code review pack** — implementation plus tests, nothing else:
+**A code review pack** — just the change, for pasting into a reviewer:
+
+```bash
+ctxpack --diff --max-tokens 60k -o review.md       # uncommitted work
+ctxpack --diff main --max-tokens 60k -o review.md   # a whole branch
+```
+
+**Implementation plus tests, nothing else:**
 
 ```bash
 ctxpack src/ tests/ --include '*.py' --max-tokens 100k -o review.md
@@ -301,6 +361,9 @@ A few decisions worth knowing about, in case you want to change them.
 * **Unicode output, ASCII fallback.** If the output stream cannot encode
   box-drawing characters (a Windows console, say), the tree silently degrades to
   `|--` / `` `-- ``.
+* **`--diff` asks git rather than guessing.** Parsing the index by hand would be
+  another thing to get wrong; `git diff` already knows, and the answer matches
+  what the user saw in `git status` a second earlier.
 
 ## Development
 
@@ -309,11 +372,14 @@ git clone https://github.com/muguang1224/ctxpack
 cd ctxpack
 python -m pip install -e ".[dev]"
 
-python -m pytest            # 108 tests, no network, no fixtures on disk
+python -m pytest            # the full suite; no network, no fixtures on disk
 ruff check . && ruff format --check .
 
 # Optional: check the ignore engine against real git (needs git on PATH)
 python3 tools/gitignore_oracle.py .
+
+# Optional: rebuild the committed example pack
+python3 examples/regenerate.py
 ```
 
 The test suite builds its fixtures in temporary directories, so it runs on

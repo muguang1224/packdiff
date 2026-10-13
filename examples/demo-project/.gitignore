@@ -1,0 +1,4 @@
+# Build output and caches are noise in a prompt, so they are ignored here the
+# same way a real project would.
+cache/
+*.log

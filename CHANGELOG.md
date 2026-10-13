@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--diff [REV]` packs only the files that changed against a revision, defaulting
+  to `HEAD` and including untracked files. It answers the most common question
+  this tool gets asked — "show the model what I just changed" — without spending
+  the context window on the rest of the repository. Change detection shells out
+  to `git diff` so it agrees with what `git status` just told you, falls back to
+  the empty tree in a repository with no commits yet, and reports a missing git,
+  a bad revision or a path outside the repository as a clear error.
+- `examples/` with a small demo project and its committed pack output, so the
+  format can be inspected without installing anything. `examples/regenerate.py`
+  rebuilds it and `tests/test_examples.py` fails if the committed copy goes
+  stale, which keeps the two from drifting apart.
+- CI now smoke-tests `--diff` in a scratch repository on every platform.
+- The test suite is now 149 tests. The `--diff` work added integration tests
+  that build real repositories in temporary directories, so they skip cleanly
+  where git is not installed.
+
 ## [0.1.0] - 2026-10-13
 
 First release.

@@ -19,7 +19,16 @@ ruff format --check .          # formatting
 ```
 
 If your change alters the output format, update the sample in `README.md` and
-add a line to the `Unreleased` section of `CHANGELOG.md`.
+add a line to the `Unreleased` section of `CHANGELOG.md`. If it changes what a
+pack looks like, also run:
+
+```bash
+python3 examples/regenerate.py     # rebuild the committed example pack
+```
+
+`tests/test_examples.py` compares that committed pack byte for byte against a
+fresh render, so it will fail until you do. That is the point: the example is a
+golden file, and a golden file that drifts is worse than none.
 
 ## Checking the ignore engine against git
 
@@ -61,6 +70,11 @@ build their fixtures in temporary directories using `tests/support.py`. No
 network access, no committed fixtures, and they must pass on Windows — which
 means no hard-coded `/` path separators and no assumptions about case-sensitive
 filesystems.
+
+The `--diff` tests create real repositories and shell out to git, so they are
+skipped where git is not installed. `tests/support.py` passes
+`core.autocrlf=false` to every git command on purpose; without it a CRLF
+checkout makes every file look modified and the tests go flaky on Windows.
 
 ## Reporting a bug
 

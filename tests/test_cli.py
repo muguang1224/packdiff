@@ -13,7 +13,7 @@ from unittest import mock
 from ctxpack.cli import _budget_for_files, build_parser, main, parse_size, parse_tokens
 from ctxpack.tokens import estimate_tokens
 from ctxpack.walk import PackedFile
-from support import AsciiStream, make_tree
+from support import GIT, AsciiStream, git_commit, git_run, init_repo, make_tree
 
 
 def run_cli(argv):
@@ -195,6 +195,108 @@ class CliBehaviourTests(unittest.TestCase):
         self.assertIn(f"Roots: `{os.path.basename(self.root)}`, `docs`", out)
         self.assertIn("### Root `docs`", out)
         self.assertIn("note.md", out)
+
+
+@unittest.skipUnless(GIT, "git is not installed")
+class DiffModeTests(unittest.TestCase):
+    """End-to-end checks for ``--diff`` against a real repository."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = os.path.realpath(self._tmp.name)
+        make_tree(
+            self.root,
+            {
+                ".gitignore": "*.log\n",
+                "README.md": "# demo\n",
+                "src/app.py": "print('one')\n",
+                "src/util.py": "VALUE = 1\n",
+                "docs/guide.md": "guide\n",
+            },
+        )
+        init_repo(self.root)
+
+    def test_diff_packs_only_changed_files(self):
+        make_tree(self.root, {"src/app.py": "print('two')\n", "src/brand_new.py": "NEW = 1\n"})
+        code, out, _ = run_cli([self.root, "-q", "--diff"])
+        self.assertEqual(code, 0)
+        self.assertIn("### `src/app.py`", out)
+        self.assertIn("### `src/brand_new.py`", out)
+        self.assertNotIn("src/util.py", out)
+        self.assertNotIn("docs/guide.md", out)
+
+    def test_diff_with_nothing_to_report_is_an_error(self):
+        code, _, err = run_cli([self.root, "--diff"])
+        self.assertEqual(code, 1)
+        self.assertIn("no files changed against 'HEAD'", err)
+
+    def test_diff_can_be_limited_to_a_subdirectory(self):
+        make_tree(self.root, {"src/app.py": "print('two')\n", "docs/guide.md": "new guide\n"})
+        code, out, _ = run_cli([os.path.join(self.root, "src"), "-q", "--diff"])
+        self.assertEqual(code, 0)
+        # A single root is rendered without a label prefix, so paths are bare.
+        self.assertIn("### `app.py`", out)
+        self.assertIn("print('two')", out)
+        self.assertNotIn("guide.md", out)
+
+    def test_diff_against_an_explicit_revision(self):
+        make_tree(self.root, {"docs/guide.md": "rewritten\n"})
+        git_run(self.root, "add", "-A")
+        git_commit(self.root, "rewrite guide")
+        code, out, _ = run_cli([self.root, "-q", "--diff", "HEAD~1"])
+        self.assertEqual(code, 0)
+        self.assertIn("### `docs/guide.md`", out)
+        self.assertNotIn("### `README.md`", out)
+
+    def test_diff_still_respects_the_secret_filter(self):
+        make_tree(self.root, {".env": "TOKEN=leaked\n", "src/app.py": "print('two')\n"})
+        code, out, _ = run_cli([self.root, "-q", "--diff"])
+        self.assertEqual(code, 0)
+        self.assertIn("### `src/app.py`", out)
+        self.assertNotIn("leaked", out)
+        self.assertIn("Skipped as secret-like", out)
+
+    def test_diff_touching_only_secrets_explains_itself(self):
+        make_tree(self.root, {".env": "TOKEN=leaked\n"})
+        code, out, err = run_cli([self.root, "--diff"])
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("looks like a secret", err)
+        self.assertIn("nothing to pack", err)
+
+    def test_diff_still_respects_gitignore(self):
+        make_tree(self.root, {"debug.log": "noise\n", "src/app.py": "print('two')\n"})
+        code, out, _ = run_cli([self.root, "-q", "--diff"])
+        self.assertEqual(code, 0)
+        self.assertNotIn("debug.log", out)
+        self.assertIn("src/app.py", out)
+
+    def test_diff_outside_a_repository_is_an_error(self):
+        with tempfile.TemporaryDirectory() as other:
+            make_tree(other, {"loose.txt": "hi\n"})
+            code, _, err = run_cli([os.path.realpath(other), "--diff"])
+        self.assertEqual(code, 1)
+        self.assertIn("error:", err)
+
+    def test_diff_combines_with_include_globs(self):
+        make_tree(self.root, {"src/app.py": "print('two')\n", "docs/guide.md": "new\n"})
+        code, out, _ = run_cli([self.root, "-q", "--diff", "--include", "*.py"])
+        self.assertEqual(code, 0)
+        self.assertIn("src/app.py", out)
+        self.assertNotIn("guide.md", out)
+
+    def test_diff_list_mode_shows_only_changes(self):
+        make_tree(self.root, {"src/app.py": "print('two')\n"})
+        code, out, _ = run_cli([self.root, "--list", "-q", "--diff"])
+        self.assertEqual(code, 0)
+        self.assertIn("src/app.py", out)
+        self.assertNotIn("README.md", out)
+
+    def test_help_documents_diff_mode(self):
+        help_text = build_parser().format_help()
+        self.assertIn("--diff", help_text)
+        self.assertIn("diff mode:", help_text)
 
 
 class BudgetSelectionTests(unittest.TestCase):

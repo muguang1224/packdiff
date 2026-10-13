@@ -1,0 +1,7 @@
+{
+  "timeout": 5.0,
+  "retries": 3,
+  "upstream": {
+    "url": "https://example.invalid/api"
+  }
+}

@@ -9,9 +9,11 @@ import os
 import re
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from . import __version__
+from .git import GitError, changed_paths, is_inside, paths_within
 from .ignore import GlobSet
 from .render import render_document
 from .tokens import DEFAULT_RATIO, estimate_tokens, format_tokens
@@ -33,6 +35,11 @@ examples:
   ctxpack --include '*.py' --exclude 'tests/**'
   ctxpack --list                      show what would be packed, without content
   ctxpack src/ tests/                 pack several roots in one document
+
+diff mode:
+  ctxpack --diff                      pack only files changed since HEAD
+  ctxpack --diff main                 pack what this branch adds on top of main
+  ctxpack --diff HEAD~3 -o review.md  pack the last three commits
 
 ignore rules:
   .gitignore files (including nested ones) are honoured, unless --no-gitignore.
@@ -103,6 +110,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=parse_tokens,
         metavar="N",
         help="keep the pack under roughly N tokens (accepts 32k, 1m)",
+    )
+    parser.add_argument(
+        "--diff",
+        nargs="?",
+        const="HEAD",
+        default=None,
+        metavar="REV",
+        help=(
+            "only pack files changed against REV (default: HEAD), including "
+            "uncommitted and untracked files"
+        ),
     )
     parser.add_argument(
         "--include",
@@ -345,6 +363,33 @@ def summarize(results: Sequence[ScanResult], quiet: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _diff_options(args: argparse.Namespace, options: ScanOptions) -> list[ScanOptions] | None:
+    """Build per-root options for ``--diff``, or ``None`` when it was not asked for.
+
+    The change set is computed against the repository containing the *first*
+    path, and each root then gets its own copy of the options with ``only_paths``
+    narrowed to what lives under it.  Roots outside that repository are an error
+    rather than a silent no-op: the user asked a question about a change set, and
+    answering with nothing would be the wrong kind of quiet.
+    """
+    if args.diff is None:
+        return None
+
+    repo, changed = changed_paths(args.diff, cwd=args.paths[0])
+    if not changed:
+        raise GitError(f"no files changed against {args.diff!r}")
+
+    per_root: list[ScanOptions] = []
+    for path in args.paths:
+        abspath = os.path.abspath(path)
+        if not is_inside(abspath, repo):
+            raise GitError(f"{path} is not inside the git repository at {repo}")
+        per_root.append(
+            replace(options, only_paths=frozenset(paths_within(abspath, repo, changed)))
+        )
+    return per_root
+
+
 def _resolve_generated_at() -> datetime:
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
     if epoch:
@@ -398,7 +443,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         token_ratio=args.token_ratio,
     )
 
-    results, _labels = collect(args.paths, options)
+    try:
+        per_root = _diff_options(args, options)
+    except GitError as exc:
+        print(f"{PROGRAM}: error: {exc}", file=sys.stderr)
+        return 1
+
+    results, _labels = collect(args.paths, options, per_root)
     summarize(results, args.quiet)
 
     if not any(result.files for result in results):

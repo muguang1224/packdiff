@@ -19,6 +19,7 @@ token 估算值。
 ```
 ctxpack . -o context.md                # 打包当前仓库
 ctxpack --max-tokens 32k -o ctx.md     # 塞进 32k 上下文
+ctxpack --diff -o review.md            # 或者只要还没提交的改动
 ctxpack src/ docs/ --include '*.py'    # 只要两棵子树里的 Python
 ```
 
@@ -130,6 +131,52 @@ ctxpack: 5 files, 103 B from my-service
 ctxpack: skipped .env: looks like a secret (pass --include-secrets)
 ```
 
+## 只打包改动过的文件
+
+这个工具最常见的用法其实不是"这是我的仓库"，而是"这是我刚改的东西"。
+`--diff` 只打包相对某个版本有差异的文件，并且包含未提交和未跟踪的文件 ——
+因为新增的文件本来就是这次改动的一部分：
+
+```bash
+ctxpack --diff                      # 我还没提交什么？
+ctxpack --diff main                 # 这个分支比 main 多了什么？
+ctxpack --diff HEAD~3 -o review.md  # 最近三次提交
+ctxpack src/ --diff                 # 限制在某个子树里
+```
+
+它和其他选项是正交的：改动集合仍然要过 `.gitignore`、二进制检测和密钥过滤。
+
+```bash
+ctxpack --diff --max-tokens 16k | pbcopy
+```
+
+删除文件的行为符合直觉：git 会把删除的文件报出来，但它在磁盘上已经不存在，
+自然匹配不到任何内容，于是就不会被打包。没有改动、或者改动全被过滤掉时，你会
+拿到一个明确的报错，而不是一份空文档：
+
+```
+$ ctxpack --diff
+ctxpack: error: no files changed against 'HEAD'
+```
+
+改动检测是直接调 `git diff` 拿结果的，所以它和你刚才 `git status` 看到的完全一致；
+而如果机器上没有 git、版本号写错、或者把 `--diff` 指向了仓库外的目录，你会拿到
+一句说明原因的错误，而不是悄悄给你一份空包。
+
+## 一份现成的示例
+
+[`examples/demo-project.pack.md`](examples/demo-project.pack.md) 是一个小样例项目
+的真实打包结果，提交在仓库里，不用安装就能直接看格式。那个样例目录是特意布置的，
+用来展示各种过滤在起作用：`cache/` 和 `debug.log` 被 `.gitignore` 干掉，
+`assets/logo.png` 作为二进制被干掉，而 `.env.example` 保留下来 —— 模板不是密钥。
+
+```bash
+python3 examples/regenerate.py    # 改过输出格式后重新生成
+```
+
+`tests/test_examples.py` 会重新生成这份包并与提交的版本逐字节比对，所以示例不会
+悄悄过期。
+
 ## Token 预算
 
 `--max-tokens` 让你把包控制在一个上下文窗口内，而不是贴到一半爆掉。
@@ -223,6 +270,7 @@ ctxpack --include-secrets      # 确实需要时才用
 | `PATH...` | `.` | 要打包的文件或目录；多个根目录合并进同一份文档。 |
 | `-o, --output FILE` | stdout | 写入 `FILE`，`-` 表示 stdout。 |
 | `--max-tokens N` | 不限 | 把包控制在约 `N` token 内，接受 `32k`、`1m`。 |
+| `--diff [REV]` | 关 | 只打包相对 `REV`（默认 `HEAD`）有改动的文件，含未提交与未跟踪文件。 |
 | `--include GLOB` | — | 只打包匹配的路径，可重复。 |
 | `--exclude GLOB` | — | 跳过匹配的路径，可重复。 |
 | `--ignore-file FILE` | `.ctxpackignore` | 额外的忽略文件，gitignore 语法。 |
@@ -250,7 +298,14 @@ ctxpack src/ --max-tokens 16k | pbcopy            # macOS
 ctxpack src/ --max-tokens 16k | clip              # Windows
 ```
 
-**代码评审包** —— 只要实现和测试：
+**代码评审包** —— 只要这次改动：
+
+```bash
+ctxpack --diff --max-tokens 60k -o review.md        # 未提交的改动
+ctxpack --diff main --max-tokens 60k -o review.md    # 整个分支
+```
+
+**实现 + 测试，不要别的：**
 
 ```bash
 ctxpack src/ tests/ --include '*.py' --max-tokens 100k -o review.md
@@ -280,6 +335,8 @@ ctxpack --list | sort -k2 -n | tail   # 最重的几个文件
   ```` ``` ```` 会被提前闭合；渲染器会输出比文件内最长反引号串多一个反引号的围栏。
 * **Unicode 输出，ASCII 兜底。** 如果输出流编码不了制表符（比如 Windows
   控制台），目录树会自动降级为 `|--` / `` `-- ``。
+* **`--diff` 直接问 git，而不是自己猜。** 手写解析索引只是又多一处可能出错的
+  地方；`git diff` 本来就知道答案，而且和你一秒前在 `git status` 里看到的一致。
 
 ## 开发
 
@@ -288,11 +345,14 @@ git clone https://github.com/muguang1224/ctxpack
 cd ctxpack
 python -m pip install -e ".[dev]"
 
-python -m pytest            # 108 个测试，不联网，不在磁盘上留 fixture
+python -m pytest            # 完整测试套件；不联网，不在磁盘上留 fixture
 ruff check . && ruff format --check .
 
 # 可选：用真实 git 校验忽略引擎（需要 PATH 里有 git）
 python3 tools/gitignore_oracle.py .
+
+# 可选：重新生成提交在仓库里的示例包
+python3 examples/regenerate.py
 ```
 
 测试用例的目录树在临时目录里现场构造，因此在 Linux、macOS、Windows 上都能

@@ -182,6 +182,8 @@ class ScanOptions:
     token_ratio: float = DEFAULT_RATIO
     extra_ignored_dirs: tuple[str, ...] = ()
     extra_ignored_files: tuple[str, ...] = ()
+    #: When set, only these root-relative paths are considered (used by --diff).
+    only_paths: frozenset[str] | None = None
 
     def ignored_dirs(self) -> set[str]:
         if not self.default_ignores:
@@ -192,6 +194,17 @@ class ScanOptions:
         if not self.default_ignores:
             return set(self.extra_ignored_files)
         return set(DEFAULT_IGNORED_FILES) | set(self.extra_ignored_files)
+
+    def wanted_dirs(self) -> set[str]:
+        """Directories worth descending into when ``only_paths`` is set."""
+        if self.only_paths is None:
+            return set()
+        dirs: set[str] = set()
+        for path in self.only_paths:
+            parts = path.split("/")
+            for depth in range(1, len(parts)):
+                dirs.add("/".join(parts[:depth]))
+        return dirs
 
 
 @dataclass
@@ -281,9 +294,18 @@ def scan_root(root: str, options: ScanOptions, label: str | None = None) -> Scan
         return result
 
     ignores = _seed_ignores(root, options)
-    _walk(root, "", ignores, options, root, result, {os.path.realpath(root)})
+    _walk(root, "", ignores, options, root, result, {os.path.realpath(root)}, options.wanted_dirs())
     result.files.sort(key=lambda f: f.path)
     return result
+
+
+def _outside_change_set(
+    rel: str, is_dir: bool, only_paths: frozenset[str], wanted_dirs: set[str]
+) -> bool:
+    """True when ``--diff`` should skip *rel*."""
+    if rel in only_paths:
+        return False
+    return not (is_dir and rel in wanted_dirs)
 
 
 def _walk(
@@ -294,6 +316,7 @@ def _walk(
     root: str,
     result: ScanResult,
     visited: set[str],
+    wanted_dirs: set[str],
 ) -> None:
     try:
         entries = list(os.scandir(dir_abs))
@@ -320,6 +343,14 @@ def _walk(
             is_dir = entry.is_dir(follow_symlinks=False)
         except OSError:  # pragma: no cover - broken symlink
             continue
+
+        # --diff: a file must be in the change set, and a directory is only worth
+        # entering when something in the change set lives underneath it.
+        if options.only_paths is not None and _outside_change_set(
+            rel, is_dir, options.only_paths, wanted_dirs
+        ):
+            continue
+
         is_link = entry.is_symlink()
 
         if is_dir:
@@ -338,7 +369,7 @@ def _walk(
                     result.skipped.append(Skipped(rel, "symlink loop"))
                     continue
                 visited.add(real)
-            _walk(entry.path, rel, ignores, options, root, result, visited)
+            _walk(entry.path, rel, ignores, options, root, result, visited, wanted_dirs)
             continue
 
         if ignores.is_ignored(rel, False):
@@ -411,11 +442,19 @@ def _collect_file(
     )
 
 
-def collect(paths: Sequence[str], options: ScanOptions) -> tuple[list[ScanResult], list[str]]:
-    """Scan several roots, de-duplicating identical basenames for display."""
+def collect(
+    paths: Sequence[str],
+    options: ScanOptions,
+    per_root: Sequence[ScanOptions] | None = None,
+) -> tuple[list[ScanResult], list[str]]:
+    """Scan several roots, de-duplicating identical basenames for display.
+
+    *per_root* overrides the options for individual roots; ``--diff`` needs that
+    because the changed-file set is relative to each root.
+    """
     results: list[ScanResult] = []
     labels: list[str] = []
-    for path in paths:
+    for index, path in enumerate(paths):
         abspath = os.path.abspath(path)
         label = os.path.basename(abspath.rstrip(os.sep)) or abspath
         if label in labels:
@@ -424,5 +463,6 @@ def collect(paths: Sequence[str], options: ScanOptions) -> tuple[list[ScanResult
                 suffix += 1
             label = f"{label} ({suffix})"
         labels.append(label)
-        results.append(scan_root(abspath, options, label=label))
+        root_options = per_root[index] if per_root is not None else options
+        results.append(scan_root(abspath, root_options, label=label))
     return results, labels
