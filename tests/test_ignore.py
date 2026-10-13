@@ -6,7 +6,7 @@ import os
 import tempfile
 import unittest
 
-from ctxpack.ignore import (
+from packdiff.ignore import (
     GlobSet,
     IgnoreRule,
     IgnoreStack,

@@ -6,8 +6,8 @@ import os
 import tempfile
 import unittest
 
-from ctxpack.ignore import GlobSet
-from ctxpack.walk import ScanOptions, format_size, scan_root
+from packdiff.ignore import GlobSet
+from packdiff.walk import ScanOptions, format_size, scan_root
 from support import make_tree, paths_of
 
 

@@ -1,0 +1,78 @@
+name: Release
+
+# PyPI is the irreversible half of a release: a version number can never be
+# re-uploaded, so this is the part worth automating and gating. The GitHub
+# release is editable and deletable, so it stays a deliberate manual step.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+      - name: Check that the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          version=$(python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$tag version=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag v$tag does not match the version in pyproject.toml ($version)"
+            exit 1
+          fi
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Validate the distribution metadata
+        run: twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  test:
+    name: test the tagged tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run tests
+        run: python -m pytest -q
+
+  publish:
+    name: publish to PyPI
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/packdiff
+    permissions:
+      id-token: write # trusted publishing: no API token in the repository
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ctxpack"
-version = "0.2.0"
+name = "packdiff"
+version = "0.3.0"
 description = "Pack a repository into a single, LLM-friendly Markdown file."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,13 +33,13 @@ dependencies = []
 dev = ["pytest>=7.0", "ruff>=0.6.0"]
 
 [project.scripts]
-ctxpack = "ctxpack.cli:main"
+packdiff = "packdiff.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/muguang1224/ctxpack"
-Repository = "https://github.com/muguang1224/ctxpack"
-Issues = "https://github.com/muguang1224/ctxpack/issues"
-Changelog = "https://github.com/muguang1224/ctxpack/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/muguang1224/packdiff"
+Repository = "https://github.com/muguang1224/packdiff"
+Issues = "https://github.com/muguang1224/packdiff/issues"
+Changelog = "https://github.com/muguang1224/packdiff/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

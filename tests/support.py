@@ -16,7 +16,7 @@ GIT = shutil.which("git")
 # Keep line endings out of the picture: a CRLF checkout would make every file
 # look modified and turn git-based tests into flakes on Windows.
 _GIT_SETTINGS = ("-c", "core.autocrlf=false", "-c", "core.safecrlf=false")
-_GIT_IDENTITY = ("-c", "user.name=ctxpack tests", "-c", "user.email=tests@example.com")
+_GIT_IDENTITY = ("-c", "user.name=packdiff tests", "-c", "user.email=tests@example.com")
 
 
 def make_tree(root: str, spec: TreeSpec) -> None:

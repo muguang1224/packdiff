@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import unittest
 
-from ctxpack.languages import (
+from packdiff.languages import (
     any_secret,
     is_binary_extension,
     is_secret_name,
     language_for,
 )
-from ctxpack.tokens import DEFAULT_RATIO, estimate_tokens, format_tokens
+from packdiff.tokens import DEFAULT_RATIO, estimate_tokens, format_tokens
 
 
 class EstimateTests(unittest.TestCase):

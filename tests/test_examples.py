@@ -12,7 +12,7 @@ import importlib.util
 import pathlib
 import unittest
 
-from ctxpack.languages import is_secret_name
+from packdiff.languages import is_secret_name
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 REGENERATE = REPO_ROOT / "examples" / "regenerate.py"
@@ -22,7 +22,7 @@ DEMO_DIR = REPO_ROOT / "examples" / "demo-project"
 
 def load_regenerate():
     """Import examples/regenerate.py by path, without touching sys.path."""
-    spec = importlib.util.spec_from_file_location("ctxpack_example_regenerate", REGENERATE)
+    spec = importlib.util.spec_from_file_location("packdiff_example_regenerate", REGENERATE)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

@@ -2,7 +2,7 @@
 
 ## `demo-project.pack.md`
 
-The output of running ctxpack on `demo-project/`, committed so you can see what
+The output of running packdiff on `demo-project/`, committed so you can see what
 this tool produces without installing anything:
 
 ```bash
@@ -15,7 +15,7 @@ against the committed file, so it cannot silently drift out of date.
 ## `demo-project/`
 
 A deliberately tiny project — a README, a manifest, two modules, a config
-template — arranged to show off what ctxpack filters out:
+template — arranged to show off what packdiff filters out:
 
 | Path | What it demonstrates |
 | --- | --- |
@@ -40,7 +40,7 @@ add needed the flag.
 
 ### Why there is no `.env` here
 
-The secret filter is the most useful thing ctxpack does, and it would have been
+The secret filter is the most useful thing packdiff does, and it would have been
 easy to demonstrate with a fake `.env`. It is deliberately absent: a public
 repository is a bad place for any file called `.env`, even one full of
 placeholders, and copying a fake credential file into a repository is a habit

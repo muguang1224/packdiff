@@ -5,8 +5,8 @@ Thanks for taking the time. Issues and pull requests are both welcome.
 ## Getting set up
 
 ```bash
-git clone https://github.com/muguang1224/ctxpack
-cd ctxpack
+git clone https://github.com/muguang1224/packdiff
+cd packdiff
 python -m pip install -e ".[dev]"
 ```
 
@@ -40,7 +40,7 @@ python3 tools/gitignore_oracle.py .        # or any repository you trust
 ```
 
 It walks a real repository, asks `git check-ignore --no-index` about every path,
-and reports any path where ctxpack disagrees. It is not part of the test suite
+and reports any path where packdiff disagrees. It is not part of the test suite
 because it shells out to `git`, but please run it against a repository with
 interesting ignore rules before changing `ignore.py`. The three subtlest rules
 it caught during development are documented in `IgnorePattern.matches` — the
@@ -48,7 +48,7 @@ tests for them cite `git check-ignore` for that reason.
 
 ## What this project cares about
 
-**Zero runtime dependencies.** ctxpack exists partly because a `pip install`
+**Zero runtime dependencies.** packdiff exists partly because a `pip install`
 should not pull a dependency tree into someone's environment. A pull request that
 adds a runtime dependency needs a strong argument.
 
@@ -76,8 +76,24 @@ skipped where git is not installed. `tests/support.py` passes
 `core.autocrlf=false` to every git command on purpose; without it a CRLF
 checkout makes every file look modified and the tests go flaky on Windows.
 
+## Releasing
+
+Releases are published to PyPI by `.github/workflows/release.yml` using
+[trusted publishing](https://docs.pypi.org/trusted-publishers/), which means the
+repository holds no API token.
+
+1. Move the `Unreleased` section of `CHANGELOG.md` into a new dated version, bump
+   `version` in `pyproject.toml` and `__version__` in `src/packdiff/__init__.py`,
+   then run `python3 examples/regenerate.py` — the example pack carries the
+   version string in its header, and the golden test will fail until you do.
+2. Commit, then tag: `git tag -a vX.Y.Z -m "..."` and push the tag. The workflow
+   builds, tests and publishes; it refuses to run if the tag and the version in
+   `pyproject.toml` disagree, because PyPI will not let you re-upload a version.
+3. Create the GitHub release separately, since it is editable and the PyPI upload
+   is not: `gh release create vX.Y.Z --generate-notes`.
+
 ## Reporting a bug
 
-Please include the version (`ctxpack --version`), your OS, the exact command,
-and — if it is safe to share — the relevant part of `ctxpack --list` output.
+Please include the version (`packdiff --version`), your OS, the exact command,
+and — if it is safe to share — the relevant part of `packdiff --list` output.
 Never paste a pack of a private repository into a public issue.

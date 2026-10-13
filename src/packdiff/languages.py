@@ -165,7 +165,7 @@ FILENAME_LANGUAGES = {
     ".npmignore": "gitignore",
     ".eslintignore": "gitignore",
     ".prettierignore": "gitignore",
-    ".ctxpackignore": "gitignore",
+    ".packdiffignore": "gitignore",
     ".gitattributes": "gitattributes",
     ".editorconfig": "ini",
     ".env.example": "dotenv",

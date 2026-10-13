@@ -1,4 +1,4 @@
-"""Enable ``python -m ctxpack``."""
+"""Enable ``python -m packdiff``."""
 
 from __future__ import annotations
 

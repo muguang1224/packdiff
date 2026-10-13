@@ -40,6 +40,6 @@ coverage.xml
 Thumbs.db
 desktop.ini
 
-# ctxpack output
+# packdiff output
 context.md
-*.ctxpack.md
+*.packdiff.md

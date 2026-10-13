@@ -10,9 +10,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from ctxpack.cli import _budget_for_files, build_parser, main, parse_size, parse_tokens
-from ctxpack.tokens import estimate_tokens
-from ctxpack.walk import PackedFile
+from packdiff.cli import _budget_for_files, build_parser, main, parse_size, parse_tokens
+from packdiff.tokens import estimate_tokens
+from packdiff.walk import PackedFile
 from support import GIT, AsciiStream, git_commit, git_run, init_repo, make_tree
 
 
@@ -75,7 +75,7 @@ class CliBehaviourTests(unittest.TestCase):
     def test_default_run_packs_the_tree_to_stdout(self):
         code, out, err = run_cli([self.root, "-q"])
         self.assertEqual(code, 0)
-        self.assertIn("# ctxpack", out)
+        self.assertIn("# packdiff", out)
         self.assertIn("### `src/app.py`", out)
         self.assertIn("```python", out)
         self.assertEqual(err, "")
@@ -107,14 +107,14 @@ class CliBehaviourTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(os.path.isfile(target))
         with open(target, encoding="utf-8") as handle:
-            self.assertIn("# ctxpack", handle.read())
+            self.assertIn("# packdiff", handle.read())
         self.assertEqual(out, "")
         self.assertEqual(err, "")
 
     def test_dash_output_means_stdout(self):
         code, out, _ = run_cli([self.root, "-q", "-o", "-"])
         self.assertEqual(code, 0)
-        self.assertIn("# ctxpack", out)
+        self.assertIn("# packdiff", out)
 
     def test_max_tokens_defers_files(self):
         _, out, _ = run_cli([self.root, "-q", "--max-tokens", "50"])
@@ -328,7 +328,7 @@ class BudgetSelectionTests(unittest.TestCase):
         )
 
     def test_no_budget_keeps_everything(self):
-        from ctxpack.cli import select_within_budget
+        from packdiff.cli import select_within_budget
 
         files = [self.make("a.py", 10, 10), self.make("b.py", 10, 10)]
         selected, deferred = select_within_budget(files, None)
@@ -336,7 +336,7 @@ class BudgetSelectionTests(unittest.TestCase):
         self.assertEqual(deferred, [])
 
     def test_priority_files_win_over_larger_plain_files(self):
-        from ctxpack.cli import select_within_budget
+        from packdiff.cli import select_within_budget
 
         readme = self.make("README.md", 30, 30, priority=0)
         big = self.make("big.py", 40, 100, priority=1)
@@ -345,7 +345,7 @@ class BudgetSelectionTests(unittest.TestCase):
         self.assertEqual(deferred, [big])
 
     def test_deferred_files_are_sorted_by_path(self):
-        from ctxpack.cli import select_within_budget
+        from packdiff.cli import select_within_budget
 
         files = [self.make("z.py", 10, 10), self.make("m.py", 10, 10), self.make("a.py", 10, 10)]
         selected, deferred = select_within_budget(files, 10)

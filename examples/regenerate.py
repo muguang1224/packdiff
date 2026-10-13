@@ -1,6 +1,6 @@
 """Regenerate ``examples/demo-project.pack.md``.
 
-The generated file is committed so that visitors can see ctxpack's output
+The generated file is committed so that visitors can see packdiff's output
 without installing anything, and ``tests/test_examples.py`` asserts that the
 committed copy still matches what the tool produces.  If you change the output
 format, run this script and commit the result — the test will tell you if you
@@ -27,7 +27,7 @@ FIXED_EPOCH = "1767225600"
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from ctxpack.cli import main  # noqa: E402  (imported after sys.path is extended)
+from packdiff.cli import main  # noqa: E402  (imported after sys.path is extended)
 
 
 def build_pack() -> str:
@@ -44,7 +44,7 @@ def build_pack() -> str:
         else:
             os.environ["SOURCE_DATE_EPOCH"] = previous
     if code != 0:
-        raise SystemExit(f"ctxpack exited with {code} while packing the demo project")
+        raise SystemExit(f"packdiff exited with {code} while packing the demo project")
     return buffer.getvalue()
 
 

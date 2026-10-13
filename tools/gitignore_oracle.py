@@ -1,4 +1,4 @@
-"""Independent verification: compare ctxpack's ignore engine with real git.
+"""Independent verification: compare packdiff's ignore engine with real git.
 
 Not part of the test suite (it shells out to `git`), just a one-off harness
 used while developing the ignore engine.  Run it with:
@@ -6,7 +6,7 @@ used while developing the ignore engine.  Run it with:
     python3 tools/gitignore_oracle.py /path/to/repo
 
 Every path in the repository is tested with `git check-ignore --no-index`, and
-the same path is offered to a ctxpack IgnoreStack built exactly the way the
+the same path is offered to a packdiff IgnoreStack built exactly the way the
 walker builds it (root rules, then rules pushed as directories are entered).
 """
 
@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-from ctxpack.ignore import IgnoreStack, load_ignore_rule
+from packdiff.ignore import IgnoreStack, load_ignore_rule
 
 
 def collect(root: str):
@@ -72,7 +72,7 @@ def main(root: str) -> int:
         )
         if git_says != mine:
             mismatches += 1
-            print(f"MISMATCH {rel!r} dir={is_dir} git={git_says} ctxpack={mine}")
+            print(f"MISMATCH {rel!r} dir={is_dir} git={git_says} packdiff={mine}")
     print(f"compared {checked} paths: {mismatches} mismatches")
     return 1 if mismatches else 0
 

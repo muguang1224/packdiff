@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from ctxpack.git import GitError, changed_paths, is_inside, paths_within, repo_root
+from packdiff.git import GitError, changed_paths, is_inside, paths_within, repo_root
 from support import GIT, git_commit, git_run, init_repo, make_tree
 
 

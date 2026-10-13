@@ -2,7 +2,7 @@
 
 A deliberately tiny project used to generate `../demo-project.pack.md`.
 
-It exists so that visitors can see the output of `ctxpack` without installing
+It exists so that visitors can see the output of `packdiff` without installing
 anything, and so that the test suite has a real directory tree to assert on.
 
 Things worth noticing in the generated pack:

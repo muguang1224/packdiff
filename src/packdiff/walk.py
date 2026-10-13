@@ -1,6 +1,6 @@
 """Directory walking, filtering and file reading.
 
-The walker is where most of ctxpack's "does the right thing without being
+The walker is where most of packdiff's "does the right thing without being
 asked" behaviour lives: nested ``.gitignore`` files, a built-in denylist for
 build artefacts, binary detection by content *and* by extension, and a secret
 filter that keeps live credentials out of your prompt.
@@ -263,7 +263,7 @@ def _seed_ignores(root: str, options: ScanOptions) -> IgnoreStack:
     if options.ignore_file:
         extra_path = options.ignore_file
         if os.path.isdir(extra_path):  # pragma: no cover - defensive
-            extra_path = os.path.join(extra_path, ".ctxpackignore")
+            extra_path = os.path.join(extra_path, ".packdiffignore")
         stack.push(load_ignore_rule(extra_path, base=""))
     return stack
 

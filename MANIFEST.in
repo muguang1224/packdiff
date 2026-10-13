@@ -1,0 +1,13 @@
+# What goes into the source distribution.
+#
+# Downstream packagers (Homebrew, Debian, conda-forge) build from the sdist and
+# run the test suite, so the sdist has to carry everything the suite touches.
+# Without this file setuptools only picks up `tests/test*.py` by default, which
+# leaves out `tests/support.py` and makes the suite fail to even import — and
+# `examples/demo-project.pack.md`, which the golden test reads.
+include CHANGELOG.md
+include CONTRIBUTING.md
+
+recursive-include tests *.py
+recursive-include examples *
+recursive-include tools *.py

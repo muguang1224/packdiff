@@ -129,7 +129,7 @@ def is_inside(root: str, repo: str) -> bool:
 def paths_within(root: str, repo: str, paths: set[str]) -> set[str]:
     """Re-express repo-relative *paths* relative to *root*.
 
-    Paths outside *root* are dropped, so ``ctxpack src --diff`` packs only the
+    Paths outside *root* are dropped, so ``packdiff src --diff`` packs only the
     changed files that live under ``src``.  A single-file root contributes
     exactly one possible path — its own basename — because that is how the
     walker names it.

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
+### Changed
+
+- **Renamed from `ctxpack` to `packdiff`.** The old name was already taken on
+  PyPI by an unrelated 0.1.0 upload doing roughly the same job, so
+  `pip install ctxpack` could never have reached this project. The distribution
+  name, the console command, the import package and the ignore file all moved
+  together — a local `.ctxpackignore` should be renamed to `.packdiffignore`.
+- **Published to PyPI**, so installing is now `pip install packdiff` rather than
+  `pip install git+https://…`. The GitHub repository was renamed too; the old
+  URLs redirect, so existing links still work.
+
+### Added
+
+- A release workflow that publishes to PyPI using trusted publishing (OIDC), so
+  no API token is stored in the repository. It refuses to publish when the tag
+  and the version in `pyproject.toml` disagree — PyPI does not allow re-uploading
+  a version, so that mistake is worth catching before it is irreversible.
+
 ## [0.2.0] - 2026-10-13
 
 ### Added
@@ -15,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `HEAD` and including untracked files. It answers the most common question
   this tool gets asked — "show the model what I just changed" — without spending
   the context window on the rest of the repository. It works for a single file
-  root (`ctxpack app.py --diff`) as well as for a tree. Change detection shells
+  root (`packdiff app.py --diff`) as well as for a tree. Change detection shells
   out to `git diff` so it agrees with what `git status` just told you, falls back
   to the empty tree in a repository with no commits yet, and reports a missing
   git, a bad revision or a path outside the repository as a clear error.
@@ -34,10 +54,10 @@ First release.
 
 ### Added
 
-- `ctxpack` CLI: pack one or more roots into a single Markdown document with a
+- `packdiff` CLI: pack one or more roots into a single Markdown document with a
   metadata header, language overview, directory tree and fenced file sections.
 - `.gitignore` support, including nested ignore files anchored to their own
-  directory, plus `.git/info/exclude` and an optional `.ctxpackignore`. The
+  directory, plus `.git/info/exclude` and an optional `.packdiffignore`. The
   engine handles backslash escapes inside patterns, `**` as a whole segment with
   gitignore's trailing-`**` rule, and the rule that a pattern matching a
   directory excludes everything inside it. It was verified path-by-path against
@@ -63,6 +83,7 @@ First release.
   and the CLI end to end, including a test that `--max-tokens` is never
   exceeded by the rendered document.
 
-[Unreleased]: https://github.com/muguang1224/ctxpack/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/muguang1224/ctxpack/releases/tag/v0.2.0
-[0.1.0]: https://github.com/muguang1224/ctxpack/releases/tag/v0.1.0
+[Unreleased]: https://github.com/muguang1224/packdiff/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/muguang1224/packdiff/releases/tag/v0.3.0
+[0.2.0]: https://github.com/muguang1224/packdiff/releases/tag/v0.2.0
+[0.1.0]: https://github.com/muguang1224/packdiff/releases/tag/v0.1.0

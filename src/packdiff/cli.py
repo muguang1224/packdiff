@@ -1,4 +1,4 @@
-"""Command-line interface for ctxpack."""
+"""Command-line interface for packdiff."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from .render import render_document
 from .tokens import DEFAULT_RATIO, estimate_tokens, format_tokens
 from .walk import ScanOptions, ScanResult, collect, format_size
 
-PROGRAM = "ctxpack"
-HOMEPAGE = "https://github.com/muguang1224/ctxpack"
+PROGRAM = "packdiff"
+HOMEPAGE = "https://github.com/muguang1224/packdiff"
 
 #: Share of the budget held back for the header, overview table and tree.
 BUDGET_RESERVE_RATIO = 0.03
@@ -29,21 +29,21 @@ BUDGET_RESERVE_MAX = 2000
 
 EPILOG = """\
 examples:
-  ctxpack                             pack the current directory to stdout
-  ctxpack . -o context.md             write the pack to a file
-  ctxpack --max-tokens 32k -o ctx.md  fit the pack into ~32k tokens
-  ctxpack --include '*.py' --exclude 'tests/**'
-  ctxpack --list                      show what would be packed, without content
-  ctxpack src/ tests/                 pack several roots in one document
+  packdiff                             pack the current directory to stdout
+  packdiff . -o context.md             write the pack to a file
+  packdiff --max-tokens 32k -o ctx.md  fit the pack into ~32k tokens
+  packdiff --include '*.py' --exclude 'tests/**'
+  packdiff --list                      show what would be packed, without content
+  packdiff src/ tests/                 pack several roots in one document
 
 diff mode:
-  ctxpack --diff                      pack only files changed since HEAD
-  ctxpack --diff main                 pack what this branch adds on top of main
-  ctxpack --diff HEAD~3 -o review.md  pack the last three commits
+  packdiff --diff                      pack only files changed since HEAD
+  packdiff --diff main                 pack what this branch adds on top of main
+  packdiff --diff HEAD~3 -o review.md  pack the last three commits
 
 ignore rules:
   .gitignore files (including nested ones) are honoured, unless --no-gitignore.
-  Add a .ctxpackignore at the root for machine-local exclusions.
+  Add a .packdiffignore at the root for machine-local exclusions.
   --include/--exclude accept the same glob syntax, e.g. '!src/keep.py'.
 
 exit status:
@@ -139,7 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--ignore-file",
         metavar="FILE",
-        help="extra ignore file, gitignore syntax (default: .ctxpackignore if present)",
+        help="extra ignore file, gitignore syntax (default: .packdiffignore if present)",
     )
     parser.add_argument(
         "--no-gitignore",
@@ -305,7 +305,7 @@ def _emit(text: str, output: str | None, quiet: bool) -> None:
         return
     try:
         sys.stdout.write(text)
-    except BrokenPipeError:  # pragma: no cover - e.g. `ctxpack . | head`
+    except BrokenPipeError:  # pragma: no cover - e.g. `packdiff . | head`
         # The interpreter flushes stdout at exit, which would raise again.
         with contextlib.suppress(OSError):
             sys.stdout.close()
@@ -423,7 +423,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     ignore_file = args.ignore_file
     if ignore_file is None:
-        default_ignore = os.path.join(args.paths[0], ".ctxpackignore")
+        default_ignore = os.path.join(args.paths[0], ".packdiffignore")
         if len(args.paths) == 1 and os.path.isfile(default_ignore):
             ignore_file = default_ignore
     elif not os.path.exists(ignore_file):

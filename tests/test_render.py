@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from ctxpack.render import build_tree, code_fence, render_document, render_tree
-from ctxpack.walk import PackedFile, Skipped
+from packdiff.render import build_tree, code_fence, render_document, render_tree
+from packdiff.walk import PackedFile, Skipped
 
 
 def packed(path: str, text: str = "x = 1\n", language="python", size=None) -> PackedFile:
@@ -73,7 +73,7 @@ class DocumentTests(unittest.TestCase):
 
     def test_header_contains_version_timestamp_and_root(self):
         document = self.render()
-        self.assertIn("# ctxpack", document)
+        self.assertIn("# packdiff", document)
         self.assertIn("v0.1.0", document)
         self.assertIn("2026-01-02 03:04 UTC", document)
         self.assertIn("`repo`", document)

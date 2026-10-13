@@ -29,6 +29,30 @@ jobs:
       - name: Check formatting
         run: ruff format --check .
 
+  sdist:
+    # Downstream packagers build from the sdist and run the suite, so the sdist
+    # has to be self-sufficient. setuptools only ships tests/test*.py by
+    # default, which silently left out tests/support.py and the example pack —
+    # nothing local noticed, because a git checkout has those files anyway.
+    name: sdist is self-sufficient
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the sdist
+        run: |
+          python -m pip install --upgrade build
+          python -m build --sdist
+      - name: Build and test from the unpacked sdist
+        run: |
+          mkdir -p /tmp/from-sdist
+          tar xzf dist/*.tar.gz -C /tmp/from-sdist
+          cd /tmp/from-sdist/*/
+          python -m pip install --upgrade pip pytest
+          PYTHONPATH=src python -m pytest -q
+
   test:
     name: test (${{ matrix.os }}, ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
@@ -56,16 +80,16 @@ jobs:
       - name: Smoke test the CLI
         shell: bash
         run: |
-          ctxpack --version
-          ctxpack . --max-tokens 8k --list
-          ctxpack . --no-tree -q -o pack.md
+          packdiff --version
+          packdiff . --max-tokens 8k --list
+          packdiff . --no-tree -q -o pack.md
           test -s pack.md
       - name: Verify the secret filter end to end
         shell: bash
         run: |
           # Generate the probe at runtime so this workflow file can never
           # itself contain the string we are grepping for.
-          SECRET=$(python -c "import secrets; print('ctxpack-' + secrets.token_hex(16))")
+          SECRET=$(python -c "import secrets; print('packdiff-' + secrets.token_hex(16))")
 
           mkdir -p scratch
           printf 'TOKEN=%s\n' "$SECRET" > scratch/.env
@@ -73,7 +97,7 @@ jobs:
           printf '%s\n' "$SECRET" >> scratch/server.pem
           printf 'TOKEN=changeme\n' > scratch/.env.example
 
-          ctxpack . -q -o pack.md
+          packdiff . -q -o pack.md
 
           if grep -q "$SECRET" pack.md; then
             echo "::error::a secret leaked into the pack"
@@ -102,7 +126,7 @@ jobs:
           git commit -qm initial
 
           printf 'edited\n' > changed.py
-          ctxpack . --diff -q -o diff-pack.md
+          packdiff . --diff -q -o diff-pack.md
 
           grep -q '### `changed.py`' diff-pack.md || {
             echo "::error::--diff did not pack the changed file"
