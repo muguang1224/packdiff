@@ -11,3 +11,8 @@ include CONTRIBUTING.md
 recursive-include tests *.py
 recursive-include examples *
 recursive-include tools *.py
+
+# `recursive-include examples *` also sweeps up bytecode if you happen to have
+# run examples/regenerate.py before building. The sdist published for 0.3.0 was
+# clean only because CI builds from a fresh checkout that has no __pycache__.
+global-exclude *.py[cod]
