@@ -286,7 +286,12 @@ def scan_root(root: str, options: ScanOptions, label: str | None = None) -> Scan
     result = ScanResult(root=root, label=label)
 
     if os.path.isfile(root):
-        _collect_file(root, os.path.basename(root), root, options, result, skip_empty=False)
+        name = os.path.basename(root)
+        # With --diff a single-file root is filtered by its own name; see
+        # git.paths_within, which reports exactly that for a file root.
+        if options.only_paths is not None and name not in options.only_paths:
+            return result
+        _collect_file(root, name, root, options, result, skip_empty=False)
         return result
 
     if not os.path.isdir(root):

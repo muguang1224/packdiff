@@ -7,15 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Added
 
 - `--diff [REV]` packs only the files that changed against a revision, defaulting
   to `HEAD` and including untracked files. It answers the most common question
   this tool gets asked — "show the model what I just changed" — without spending
-  the context window on the rest of the repository. Change detection shells out
-  to `git diff` so it agrees with what `git status` just told you, falls back to
-  the empty tree in a repository with no commits yet, and reports a missing git,
-  a bad revision or a path outside the repository as a clear error.
+  the context window on the rest of the repository. It works for a single file
+  root (`ctxpack app.py --diff`) as well as for a tree. Change detection shells
+  out to `git diff` so it agrees with what `git status` just told you, falls back
+  to the empty tree in a repository with no commits yet, and reports a missing
+  git, a bad revision or a path outside the repository as a clear error.
 - `examples/` with a small demo project and its committed pack output, so the
   format can be inspected without installing anything. `examples/regenerate.py`
   rebuilds it and `tests/test_examples.py` fails if the committed copy goes
@@ -60,5 +63,6 @@ First release.
   and the CLI end to end, including a test that `--max-tokens` is never
   exceeded by the rendered document.
 
-[Unreleased]: https://github.com/muguang1224/ctxpack/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/muguang1224/ctxpack/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/muguang1224/ctxpack/releases/tag/v0.2.0
 [0.1.0]: https://github.com/muguang1224/ctxpack/releases/tag/v0.1.0

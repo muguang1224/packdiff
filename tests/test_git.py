@@ -38,7 +38,9 @@ class RepositoryTests(unittest.TestCase):
         return paths
 
     def test_repo_root_is_resolved(self):
-        self.assertEqual(repo_root(self.root), self.root)
+        # samefile rather than string equality: Windows may spell the same
+        # directory with a different case or an 8.3 short name.
+        self.assertTrue(os.path.samefile(repo_root(self.root), self.root))
 
     def test_clean_working_tree_reports_nothing(self):
         self.assertEqual(self.changed(), set())
@@ -103,6 +105,14 @@ class RepositoryTests(unittest.TestCase):
 
 
 class PathMappingTests(unittest.TestCase):
+    """Path arithmetic, with no repository involved.
+
+    The ``/repo`` paths below do not exist on any filesystem, on purpose: they
+    pin the behaviour for a caller-supplied path that has *not* been resolved,
+    which is where this code first broke on Windows (``realpath("/repo")`` is
+    ``"/repo"`` on POSIX and ``D:\\repo`` there).
+    """
+
     def test_root_inside_repository(self):
         self.assertTrue(is_inside("/repo/src", "/repo"))
         self.assertTrue(is_inside("/repo", "/repo"))
@@ -121,6 +131,42 @@ class PathMappingTests(unittest.TestCase):
 
     def test_unrelated_paths_are_dropped(self):
         self.assertEqual(paths_within("/repo/docs", "/repo", {"src/a.py"}), set())
+
+    def test_a_single_file_root_contributes_its_own_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = os.path.realpath(tmp)
+            # new.py is untracked but present on disk, which is the --diff case
+            # for a file you have just created.
+            make_tree(
+                root,
+                {"sub/one.py": "x = 1\n", "sub/two.py": "y = 2\n", "sub/new.py": "z = 3\n"},
+            )
+            one = os.path.join(root, "sub", "one.py")
+            newline = os.path.join(root, "sub", "new.py")
+            self.assertEqual(paths_within(one, root, {"sub/one.py"}), {"one.py"})
+            self.assertEqual(paths_within(one, root, {"sub/two.py"}), set())
+            self.assertEqual(paths_within(newline, root, {"sub/new.py"}), {"new.py"})
+
+    def test_paths_within_handles_a_path_that_is_not_resolved(self):
+        """A root spelled differently from its realpath must still work.
+
+        Reached through a symlink so the mismatch is reproducible on Linux and
+        macOS — on Windows the same thing happens constantly, because
+        ``realpath("/repo")`` returns ``D:\\repo``.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            real = os.path.realpath(tmp)
+            os.makedirs(os.path.join(real, "sub"), exist_ok=True)
+            link = os.path.join(real, "link")
+            try:
+                os.symlink(real, link, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:  # pragma: no cover
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            self.assertNotEqual(link, os.path.realpath(link))
+            self.assertTrue(is_inside(os.path.join(link, "sub"), link))
+            self.assertEqual(paths_within(real, link, {"src/a.py"}), {"src/a.py"})
+            self.assertEqual(paths_within(os.path.join(link, "sub"), real, {"sub/b.py"}), {"b.py"})
 
 
 if __name__ == "__main__":  # pragma: no cover

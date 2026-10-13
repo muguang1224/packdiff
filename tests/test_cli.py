@@ -249,6 +249,21 @@ class DiffModeTests(unittest.TestCase):
         self.assertIn("### `docs/guide.md`", out)
         self.assertNotIn("### `README.md`", out)
 
+    def test_diff_can_be_limited_to_a_single_file(self):
+        # Only app.py is touched, so util.py is the unchanged control.
+        make_tree(self.root, {"src/app.py": "print('two')\n"})
+
+        changed_file = os.path.join(self.root, "src", "app.py")
+        code, out, _ = run_cli([changed_file, "-q", "--diff"])
+        self.assertEqual(code, 0)
+        self.assertIn("### `app.py`", out)
+
+        unchanged_file = os.path.join(self.root, "src", "util.py")
+        code, out, err = run_cli([unchanged_file, "--diff"])
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("nothing to pack", err)
+
     def test_diff_still_respects_the_secret_filter(self):
         make_tree(self.root, {".env": "TOKEN=leaked\n", "src/app.py": "print('two')\n"})
         code, out, _ = run_cli([self.root, "-q", "--diff"])

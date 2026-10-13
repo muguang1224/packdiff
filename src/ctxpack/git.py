@@ -19,6 +19,7 @@ __all__ = [
     "GitError",
     "changed_paths",
     "is_inside",
+    "normalise",
     "paths_within",
     "repo_root",
 ]
@@ -58,6 +59,17 @@ def _first_error_line(stderr: bytes) -> str:
 
 def _split_z(blob: bytes) -> list[str]:
     return [part for part in blob.decode("utf-8", "surrogateescape").split("\0") if part]
+
+
+def normalise(path: str) -> str:
+    """A comparable form of *path* that survives Windows.
+
+    ``realpath`` alone is not enough: Windows accepts several spellings of the
+    same directory (drive-letter case, ``/`` versus ``\\``, 8.3 short names), and
+    ``normcase`` is the standard library's answer to exactly that.  On POSIX it
+    is the identity function, so this costs nothing there.
+    """
+    return os.path.normcase(os.path.realpath(path))
 
 
 def repo_root(path: str = ".") -> str:
@@ -101,19 +113,33 @@ def changed_paths(revision: str = "HEAD", cwd: str = ".") -> tuple[str, set[str]
 
 
 def is_inside(root: str, repo: str) -> bool:
-    """True when *root* is the repository root or a directory inside it."""
-    real_root = os.path.realpath(root)
-    return real_root == repo or real_root.startswith(os.path.join(repo, ""))
+    """True when *root* is the repository root or a directory inside it.
+
+    Both sides go through :func:`normalise` before being compared.  Comparing a
+    resolved path against a caller-supplied one looks harmless on POSIX, where
+    ``realpath("/repo")`` is still ``"/repo"``, and then fails on Windows, where
+    it is ``D:\\repo``.  Normalising both is the only version that holds on all
+    three platforms.
+    """
+    real_root = normalise(root)
+    real_repo = normalise(repo)
+    return real_root == real_repo or real_root.startswith(real_repo + os.sep)
 
 
 def paths_within(root: str, repo: str, paths: set[str]) -> set[str]:
     """Re-express repo-relative *paths* relative to *root*.
 
     Paths outside *root* are dropped, so ``ctxpack src --diff`` packs only the
-    changed files that live under ``src``.
+    changed files that live under ``src``.  A single-file root contributes
+    exactly one possible path — its own basename — because that is how the
+    walker names it.
     """
     real_root = os.path.realpath(root)
-    if real_root == repo:
+    real_repo = os.path.realpath(repo)
+    if normalise(real_root) == normalise(real_repo):
         return set(paths)
-    prefix = os.path.relpath(real_root, repo).replace(os.sep, "/") + "/"
+    if os.path.isfile(real_root):
+        relative = os.path.relpath(real_root, real_repo).replace(os.sep, "/")
+        return {os.path.basename(relative)} if relative in paths else set()
+    prefix = os.path.relpath(real_root, real_repo).replace(os.sep, "/") + "/"
     return {path[len(prefix) :] for path in paths if path.startswith(prefix)}
